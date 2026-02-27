@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: {{info.name}} {{service.name}} API
+  title: Creators Dashboard evaluator API
   description: |
-    A Flask + MongoDB API for the {{service.name}} service.
+    A Flask + MongoDB API for the evaluator service.
     
     ## Authentication
     All endpoints (except `/dev-login` and `/metrics`) require JWT authentication via the `Authorization` header:
@@ -13,13 +13,13 @@ info:
     For local development, obtain a token from the `/dev-login` endpoint.
   version: 0.1.0
   contact:
-    name: {{org.name}}
-    email: {{org.email}}
+    name: Agile Crafts People
+    email: info@agilecrafts.com
   license:
     name: Apache-2.0
 
 servers:
-  - url: http://localhost:{{repo.port}}
+  - url: http://localhost:9098
     description: Local development server
 
 tags:
@@ -29,22 +29,14 @@ tags:
     description: Configuration endpoints
   - name: Metrics
     description: Monitoring endpoints
-{% for domain in service.data_domains.controls -%}
-{{ '  ' -}}
-- name: {{domain}}
-    description: {{domain}} operations (create, read, update)
-{% endfor -%}
-{% for domain in service.data_domains.creates -%}
-{{ '  ' -}}
-- name: {{domain}}
-    description: {{domain}} operations (create, read)
-{% endfor -%}
-{% for domain in service.data_domains.consumes -%}
-{{ '  ' -}}
-- name: {{domain}}
-    description: {{domain}} operations (read-only)
-{% endfor -%}
-
+  - name: TestRun
+    description: TestRun operations (create, read, update)
+  - name: TestData
+    description: TestData operations (create, read, update)
+  - name: Grade
+    description: Grade operations (create, read)
+  - name: Profile
+    description: Profile operations (read-only)
 paths:
   /dev-login:
     post:
@@ -152,15 +144,13 @@ paths:
               schema:
                 type: string
 
-{% for domain in service.data_domains.controls -%}
-{{ '  ' -}}
-/api/{{domain}}:
+  /api/TestRun:
     get:
       tags:
-        - {{domain}}
-      summary: Get all {{domain}} documents
-      description: Retrieve infinite scroll batch of sorted, filtered {{domain}} documents
-      operationId: get{{domain}}s
+        - TestRun
+      summary: Get all TestRun documents
+      description: Retrieve infinite scroll batch of sorted, filtered TestRun documents
+      operationId: getTestRuns
       security:
         - bearerAuth: []
       parameters:
@@ -170,7 +160,7 @@ paths:
           description: Optional name filter (supports partial matches, case-insensitive)
           schema:
             type: string
-            example: my-{{domain}}
+            example: my-TestRun
         - name: after_id
           in: query
           required: false
@@ -242,10 +232,10 @@ paths:
           $ref: '#/components/responses/InternalError'
     post:
       tags:
-        - {{domain}}
-      summary: Create a new {{domain}} document
-      description: Create a new {{domain}} document (requires staff or admin role)
-      operationId: create{{domain}}
+        - TestRun
+      summary: Create a new TestRun document
+      description: Create a new TestRun document (requires staff or admin role)
+      operationId: createTestRun
       security:
         - bearerAuth: []
       requestBody:
@@ -253,10 +243,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/{{domain}}Input'
+              $ref: '#/components/schemas/TestRunInput'
       responses:
         '201':
-          description: {{domain}} created successfully
+          description: TestRun created successfully
           content:
             application/json:
               schema:
@@ -272,31 +262,31 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/{{domain}}/{{'{'}}{{domain}}Id{{'}'}}:
+  /api/TestRun/{TestRunId}:
     get:
       tags:
-        - {{domain}}
-      summary: Get {{domain}} by {{domain}}Id
-      description: Retrieve a specific {{domain}} document by its {{domain}}Id
-      operationId: get{{domain}}
+        - TestRun
+      summary: Get TestRun by TestRunId
+      description: Retrieve a specific TestRun document by its TestRunId
+      operationId: getTestRun
       security:
         - bearerAuth: []
       parameters:
-        - name: {{domain}}Id
+        - name: TestRunId
           in: path
           required: true
-          description: The {{domain}} ID (MongoDB ObjectId)
+          description: The TestRun ID (MongoDB ObjectId)
           schema:
             type: string
             pattern: '^[0-9a-fA-F]{24}$'
             example: 507f1f77bcf86cd799439011
       responses:
         '200':
-          description: Successfully retrieved {{domain}}
+          description: Successfully retrieved TestRun
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/{{domain}}'
+                $ref: '#/components/schemas/TestRun'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -305,17 +295,17 @@ paths:
           $ref: '#/components/responses/InternalError'
     patch:
       tags:
-        - {{domain}}
-      summary: Update {{domain}} document
-      description: Update a {{domain}} document (requires admin role). Cannot update _id, created, or saved fields.
-      operationId: update{{domain}}
+        - TestRun
+      summary: Update TestRun document
+      description: Update a TestRun document (requires admin role). Cannot update _id, created, or saved fields.
+      operationId: updateTestRun
       security:
         - bearerAuth: []
       parameters:
-        - name: {{domain}}Id
+        - name: TestRunId
           in: path
           required: true
-          description: The {{domain}} ID (MongoDB ObjectId)
+          description: The TestRun ID (MongoDB ObjectId)
           schema:
             type: string
             pattern: '^[0-9a-fA-F]{24}$'
@@ -325,14 +315,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/{{domain}}Update'
+              $ref: '#/components/schemas/TestRunUpdate'
       responses:
         '200':
-          description: {{domain}} updated successfully
+          description: TestRun updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/{{domain}}'
+                $ref: '#/components/schemas/TestRun'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -341,17 +331,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-{% endfor -%}
-
-{% for domain in service.data_domains.creates -%}
-{{ '  ' -}}
-/api/{{domain}}:
+  /api/TestData:
     get:
       tags:
-        - {{domain}}
-      summary: Get all {{domain}} documents
-      description: Retrieve infinite scroll batch of sorted, filtered {{domain}} documents
-      operationId: get{{domain}}s
+        - TestData
+      summary: Get all TestData documents
+      description: Retrieve infinite scroll batch of sorted, filtered TestData documents
+      operationId: getTestDatas
       security:
         - bearerAuth: []
       parameters:
@@ -361,7 +347,194 @@ paths:
           description: Optional name filter (supports partial matches, case-insensitive)
           schema:
             type: string
-            example: my-{{domain}}
+            example: my-TestData
+        - name: after_id
+          in: query
+          required: false
+          description: Cursor for infinite scroll (ID of last item from previous batch, omit for first request)
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+        - name: limit
+          in: query
+          required: false
+          description: Items per page (max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+        - name: sort_by
+          in: query
+          required: false
+          description: Field to sort by (name, description, status, created.at_time, saved.at_time)
+          schema:
+            type: string
+            default: name
+            example: name
+        - name: order
+          in: query
+          required: false
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+            example: asc
+      responses:
+        '200':
+          description: Successfully retrieved controls
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - limit
+                  - has_more
+                  - next_cursor
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Control'
+                  limit:
+                    type: integer
+                    example: 10
+                  has_more:
+                    type: boolean
+                    example: true
+                  next_cursor:
+                    type: string
+                    nullable: true
+                    pattern: '^[0-9a-fA-F]{24}$'
+                    example: 507f1f77bcf86cd799439011
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+        - TestData
+      summary: Create a new TestData document
+      description: Create a new TestData document (requires staff or admin role)
+      operationId: createTestData
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestDataInput'
+      responses:
+        '201':
+          description: TestData created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    pattern: '^[0-9a-fA-F]{24}$'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/TestData/{TestDataId}:
+    get:
+      tags:
+        - TestData
+      summary: Get TestData by TestDataId
+      description: Retrieve a specific TestData document by its TestDataId
+      operationId: getTestData
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: TestDataId
+          in: path
+          required: true
+          description: The TestData ID (MongoDB ObjectId)
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: Successfully retrieved TestData
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags:
+        - TestData
+      summary: Update TestData document
+      description: Update a TestData document (requires admin role). Cannot update _id, created, or saved fields.
+      operationId: updateTestData
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: TestDataId
+          in: path
+          required: true
+          description: The TestData ID (MongoDB ObjectId)
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestDataUpdate'
+      responses:
+        '200':
+          description: TestData updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/Grade:
+    get:
+      tags:
+        - Grade
+      summary: Get all Grade documents
+      description: Retrieve infinite scroll batch of sorted, filtered Grade documents
+      operationId: getGrades
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: Optional name filter (supports partial matches, case-insensitive)
+          schema:
+            type: string
+            example: my-Grade
         - name: after_id
           in: query
           required: false
@@ -399,7 +572,7 @@ paths:
             example: asc
       responses:
         '200':
-          description: Successfully retrieved {{domain}}s
+          description: Successfully retrieved Grades
           content:
             application/json:
               schema:
@@ -413,7 +586,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: '#/components/schemas/{{domain}}'
+                      $ref: '#/components/schemas/Grade'
                   limit:
                     type: integer
                     example: 10
@@ -433,10 +606,10 @@ paths:
           $ref: '#/components/responses/InternalError'
     post:
       tags:
-        - {{domain}}
-      summary: Create a new {{domain}} document
-      description: Create a new {{domain}} document (requires staff or admin role)
-      operationId: create{{domain}}
+        - Grade
+      summary: Create a new Grade document
+      description: Create a new Grade document (requires staff or admin role)
+      operationId: createGrade
       security:
         - bearerAuth: []
       requestBody:
@@ -444,10 +617,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/{{domain}}Input'
+              $ref: '#/components/schemas/GradeInput'
       responses:
         '201':
-          description: {{domain}} created successfully
+          description: Grade created successfully
           content:
             application/json:
               schema:
@@ -463,48 +636,44 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/{{domain}}/{{'{'}}{{domain}}Id{{'}'}}:
+  /api/Grade/{GradeId}:
     get:
       tags:
-        - {{domain}}
-      summary: Get {{domain}} by {{domain}}Id
-      description: Retrieve a specific {{domain}} document by its {{domain}}Id
-      operationId: get{{domain}}
+        - Grade
+      summary: Get Grade by GradeId
+      description: Retrieve a specific Grade document by its GradeId
+      operationId: getGrade
       security:
         - bearerAuth: []
       parameters:
-        - name: {{domain}}Id
+        - name: GradeId
           in: path
           required: true
-          description: The {{domain}} ID (MongoDB ObjectId)
+          description: The Grade ID (MongoDB ObjectId)
           schema:
             type: string
             pattern: '^[0-9a-fA-F]{24}$'
             example: 507f1f77bcf86cd799439011
       responses:
         '200':
-          description: Successfully retrieved {{domain}}
+          description: Successfully retrieved Grade
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/{{domain}}'
+                $ref: '#/components/schemas/Grade'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-{% endfor -%}
-
-{% for domain in service.data_domains.consumes -%}
-{{ '  ' -}}
-  /api/{{domain}}:
+  /api/Profile:
     get:
       tags:
-        - {{domain}}
-      summary: Get all {{domain}} documents
-      description: Retrieve infinite scroll batch of sorted, filtered {{domain}} documents (read-only)
-      operationId: get{{domain}}s
+        - Profile
+      summary: Get all Profile documents
+      description: Retrieve infinite scroll batch of sorted, filtered Profile documents (read-only)
+      operationId: getProfiles
       security:
         - bearerAuth: []
       parameters:
@@ -514,7 +683,7 @@ paths:
           description: Optional name filter (supports partial matches, case-insensitive)
           schema:
             type: string
-            example: my-{{domain}}
+            example: my-Profile
         - name: after_id
           in: query
           required: false
@@ -552,7 +721,7 @@ paths:
             example: asc
       responses:
         '200':
-          description: Successfully retrieved {{domain}}s
+          description: Successfully retrieved Profiles
           content:
             application/json:
               schema:
@@ -566,7 +735,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: '#/components/schemas/{{domain}}'
+                      $ref: '#/components/schemas/Profile'
                   limit:
                     type: integer
                     example: 10
@@ -584,43 +753,37 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
-{% endfor -%}
-
-{% for domain in service.data_domains.consumes -%}
-{{ '  ' -}}
-/api/{{domain}}/{{ '{'}}{{domain}}Id}:
+  /api/Profile/{ProfileId}:
     get:
       tags:
-        - {{domain}}
-      summary: Get {{domain}} by {{domain}}Id
-      description: Retrieve a specific {{domain}} document by its {{domain}}Id (read-only)
-      operationId: get{{domain}}
+        - Profile
+      summary: Get Profile by ProfileId
+      description: Retrieve a specific Profile document by its ProfileId (read-only)
+      operationId: getProfile
       security:
         - bearerAuth: []
       parameters:
-        - name: {{domain}}Id
+        - name: ProfileId
           in: path
           required: true
-          description: The {{domain}} ID (MongoDB ObjectId)
+          description: The Profile ID (MongoDB ObjectId)
           schema:
             type: string
             pattern: '^[0-9a-fA-F]{24}$'
             example: 507f1f77bcf86cd799439011
       responses:
         '200':
-          description: Successfully retrieved {{domain}}
+          description: Successfully retrieved Profile
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/{{domain}}'
+                $ref: '#/components/schemas/Profile'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-{% endfor -%}
-
 components:
   securitySchemes:
     bearerAuth:
@@ -716,11 +879,9 @@ components:
           pattern: '^[^\s]{1,40}$'
           example: corr-abc123
 
-{% for domain in service.data_domains.controls -%}
-{{ '    ' -}}
-{{domain}}:
+    TestRun:
       type: object
-      description: {{domain}} domain document
+      description: TestRun domain document
       additionalProperties: false
       required:
         - _id
@@ -735,17 +896,17 @@ components:
           example: 507f1f77bcf86cd799439011
         name:
           type: string
-          description: {{domain}} name
+          description: TestRun name
           pattern: '^[^\s]{1,40}$'
-          example: my-{{domain}}
+          example: my-TestRun
         description:
           type: string
-          description: {{domain}} description
+          description: TestRun description
           pattern: '^[^\t\n]{0,255}$'
-          example: A sample {{domain}} document
+          example: A sample TestRun document
         status:
           type: string
-          description: {{domain}} status
+          description: TestRun status
           enum:
             - active
             - archived
@@ -755,52 +916,126 @@ components:
         saved:
           $ref: '#/components/schemas/Breadcrumb'
 
-    {{domain}}Input:
+    TestRunInput:
       type: object
-      description: Input for creating a {{domain}} document
+      description: Input for creating a TestRun document
       properties:
         name:
           type: string
-          description: {{domain}} name
+          description: TestRun name
           pattern: '^[^\s]{1,40}$'
-          example: my-{{domain}}
+          example: my-TestRun
         description:
           type: string
-          description: {{domain}} description
+          description: TestRun description
           pattern: '^[^\t\n]{0,255}$'
-          example: A sample {{domain}} document
+          example: A sample TestRun document
         status:
           type: string
-          description: {{domain}} status
+          description: TestRun status
           enum:
             - active
             - archived
           example: active
 
-    {{domain}}Update:
+    TestRunUpdate:
       type: object
-      description: Fields to update in a {{domain}} document (cannot include _id, created, saved)
+      description: Fields to update in a TestRun document (cannot include _id, created, saved)
       properties:
         name:
           type: string
-          description: {{domain}} name
+          description: TestRun name
           pattern: '^[^\s]{1,40}$'
         description:
           type: string
-          description: {{domain}} description
+          description: TestRun description
           pattern: '^[^\t\n]{0,255}$'
         status:
           type: string
-          description: {{domain}} status
+          description: TestRun status
           enum:
             - active
             - archived
-{% endfor -%}
-{% for domain in service.data_domains.creates -%}
-{{ '    ' -}}
-{{domain}}:
+    TestData:
       type: object
-      description: {{domain}} domain document
+      description: TestData domain document
+      additionalProperties: false
+      required:
+        - _id
+        - name
+        - created
+        - saved
+      properties:
+        _id:
+          type: string
+          description: MongoDB document ID
+          pattern: '^[0-9a-fA-F]{24}$'
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          description: TestData name
+          pattern: '^[^\s]{1,40}$'
+          example: my-TestData
+        description:
+          type: string
+          description: TestData description
+          pattern: '^[^\t\n]{0,255}$'
+          example: A sample TestData document
+        status:
+          type: string
+          description: TestData status
+          enum:
+            - active
+            - archived
+          example: active
+        created:
+          $ref: '#/components/schemas/Breadcrumb'
+        saved:
+          $ref: '#/components/schemas/Breadcrumb'
+
+    TestDataInput:
+      type: object
+      description: Input for creating a TestData document
+      properties:
+        name:
+          type: string
+          description: TestData name
+          pattern: '^[^\s]{1,40}$'
+          example: my-TestData
+        description:
+          type: string
+          description: TestData description
+          pattern: '^[^\t\n]{0,255}$'
+          example: A sample TestData document
+        status:
+          type: string
+          description: TestData status
+          enum:
+            - active
+            - archived
+          example: active
+
+    TestDataUpdate:
+      type: object
+      description: Fields to update in a TestData document (cannot include _id, created, saved)
+      properties:
+        name:
+          type: string
+          description: TestData name
+          pattern: '^[^\s]{1,40}$'
+        description:
+          type: string
+          description: TestData description
+          pattern: '^[^\t\n]{0,255}$'
+        status:
+          type: string
+          description: TestData status
+          enum:
+            - active
+            - archived
+    Grade:
+      type: object
+      description: Grade domain document
       additionalProperties: false
       required:
         - _id
@@ -814,45 +1049,42 @@ components:
           example: 507f1f77bcf86cd799439011
         name:
           type: string
-          description: {{domain}} name
+          description: Grade name
           pattern: '^[^\s]{1,40}$'
-          example: my-{{domain}}
+          example: my-Grade
         description:
           type: string
-          description: {{domain}} description
+          description: Grade description
           pattern: '^[^\t\n]{0,255}$'
-          example: A sample {{domain}} document
+          example: A sample Grade document
         status:
           type: string
-          description: {{domain}} status
+          description: Grade status
           example: active
         created:
           $ref: '#/components/schemas/Breadcrumb'
 
-    {{domain}}Input:
+    GradeInput:
       type: object
-      description: Input for creating a {{domain}} document
+      description: Input for creating a Grade document
       properties:
         name:
           type: string
-          description: {{domain}} name
+          description: Grade name
           pattern: '^[^\s]{1,40}$'
-          example: my-{{domain}}
+          example: my-Grade
         description:
           type: string
-          description: {{domain}} description
+          description: Grade description
           pattern: '^[^\t\n]{0,255}$'
-          example: A sample {{domain}} document
+          example: A sample Grade document
         status:
           type: string
-          description: {{domain}} status
+          description: Grade status
           example: active
-{% endfor -%}
-{% for domain in service.data_domains.consumes -%}
-{{ '    ' -}}
-{{domain}}:
+    Profile:
       type: object
-      description: {{domain}} domain document (read-only)
+      description: Profile domain document (read-only)
       additionalProperties: false
       required:
         - _id
@@ -865,21 +1097,19 @@ components:
           example: 507f1f77bcf86cd799439011
         name:
           type: string
-          description: {{domain}} name
+          description: Profile name
           pattern: '^[^\s]{1,40}$'
-          example: my-{{domain}}
+          example: my-Profile
         description:
           type: string
-          description: {{domain}} description
+          description: Profile description
           pattern: '^[^\t\n]{0,255}$'
-          example: A sample {{domain}} document
+          example: A sample Profile document
         status:
           type: string
-          description: {{domain}} status
+          description: Profile status
           example: active
-{% endfor -%}
-{{ '    ' -}}
-InfiniteScrollResponse:
+    InfiniteScrollResponse:
       type: object
       description: Infinite scroll pagination response
       required:
